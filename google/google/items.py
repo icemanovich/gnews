@@ -13,4 +13,4 @@ class Publication(scrapy.Item):
     # text = scrapy.Field()
     description = scrapy.Field()
     url = scrapy.Field()
-    last_updated = scrapy.Field(serializer=str)
+    # last_updated = scrapy.Field(serializer=str)

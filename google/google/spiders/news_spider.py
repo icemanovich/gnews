@@ -3,6 +3,8 @@ from __future__ import absolute_import
 import scrapy
 from scrapy.selector import Selector
 
+from bs4 import BeautifulSoup
+
 #  ----------------
 # HACK !!!! Standart import does not work
 from .. import items
@@ -18,27 +20,35 @@ class NewsSpider(scrapy.Spider):
 
     def parse(self, response):
 
-        publication = items.Publication()
+        # page = Selector(response)
+        # content = page.xpath('//div[@class="section-content"]')
+        # blocks = content.xpath('//div[@class="esc-body"]') #[0].xpath('//h2[@class="esc-lead-article-title"]/a')
 
-        page = Selector(response)
-        # page.xpath('/html/body/div[3]/div[1]/div/div/div[3]/div/div[1]/table/tbody/tr/td[1]/div/div/div[1]/div[2]/div[2]/div/div/div/div[2]')
-        content = page.xpath('//div[@class="section-content"]')
-        blocks = content.xpath('//div[@class="esc-body"]') #[0].xpath('//h2[@class="esc-lead-article-title"]/a')
+
+        soup = BeautifulSoup(response.body, 'html.parser')
+        blocks = soup.find_all("div", attrs={"class": "esc-body"})
+
+        # blocks = page.xpath('//div[@class="esc-body"]') #[0].xpath('//h2[@class="esc-lead-article-title"]/a')
 
         for item in blocks:
-            cell = item.xpath('//div[@class="esc-body"]/div/table[@class="esc-layout-table"]/tbody/tr/td[@class="esc-layout-article-cell"]')
+            publication = items.Publication()
 
-            title = cell.xpath('//div/h2/a/span/text()').extract()[0]
-            url = cell.xpath('//div/h2/a/@href').extract()[0]
-            description = cell.xpath('//div[@class="esc-lead-snippet-wrapper"]').extract()[0]
+            a = item.find("a", attrs={'class': 'article'})
 
+            url = a['href']
+            title = item.find("a", attrs={'class': 'article'}).get_text()
+            description = item.find("div", attrs={'class': 'esc-lead-snippet-wrapper'}).next
+
+            # cell = item.xpath('//div[@class="esc-body"]/div/table[@class="esc-layout-table"]/tbody/tr/td[@class="esc-layout-article-cell"]')
+            # title = cell.xpath('//div/h2/a/span/text()').extract()[0]
+            # url = cell.xpath('//div/h2/a/@href').extract()[0]
+            # description = cell.xpath('//div[@class="esc-lead-snippet-wrapper"]/text()').extract()[0]
             publication['title'] = title
             publication['url'] = url
             publication['description'] = description
 
-            # cell //div[@class="esc-body"]/div/table[@class="esc-layout-table"]/tbody/tr/td[@class="esc-layout-article-cell"]
-            # a  //div[@class="esc-body"]/div/table[@class="esc-layout-table"]/tbody/tr/td[@class="esc-layout-article-cell"]/div/h2/a
-            #a text = a/span
+
+            yield publication
 
         """
         POSSIBLE to use BeautifulSoup to extract russian text
@@ -50,4 +60,5 @@ class NewsSpider(scrapy.Spider):
         # yield item
 
         # return publication
-        yield publication
+
+
