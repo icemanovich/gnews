@@ -10,7 +10,6 @@ import scrapy
 
 class Publication(scrapy.Item):
     title = scrapy.Field()
-    # text = scrapy.Field()
     description = scrapy.Field()
     url = scrapy.Field()
-    # last_updated = scrapy.Field(serializer=str)
+    updated_at = scrapy.Field(serializer=str)

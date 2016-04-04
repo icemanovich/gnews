@@ -8,12 +8,21 @@
 #     http://doc.scrapy.org/en/latest/topics/settings.html
 #     http://scrapy.readthedocs.org/en/latest/topics/downloader-middleware.html
 #     http://scrapy.readthedocs.org/en/latest/topics/spider-middleware.html
+import os
 
 BOT_NAME = 'google'
 
 SPIDER_MODULES = ['google.spiders']
 NEWSPIDER_MODULE = 'google.spiders'
 
+LOG_LEVEL = 'INFO'
+
+MONGO_HOST = "localhost"
+MONGO_PORT = 27017
+MONGO_DB = "gnews"
+MONGO_COLLECTION = "news"
+
+DOWNLOAD_FILE_FOLDER = os.path.join(os.path.dirname(os.path.realpath(__file__)), "download_file")
 
 # Crawl responsibly by identifying yourself (and your website) on the user-agent
 #USER_AGENT = 'google (+http://www.yourdomain.com)'
@@ -61,9 +70,16 @@ NEWSPIDER_MODULE = 'google.spiders'
 
 # Configure item pipelines
 # See http://scrapy.readthedocs.org/en/latest/topics/item-pipeline.html
-#ITEM_PIPELINES = {
-#    'google.pipelines.SomePipeline': 300,
-#}
+# ITEM_PIPELINES = {
+   # 'google.pipelines.SomePipeline': 300,
+   # 'google.pipelines.MongoPipeline': 300,
+   # 'google.pipelines.GoogleJsonPipeLine': 300,
+# }
+ITEM_PIPELINES = [
+    # 'google.pipelines.GoogleJsonPipeLine',
+    'google.pipelines.MongoPipeLine',
+
+]
 
 # Enable and configure the AutoThrottle extension (disabled by default)
 # See http://doc.scrapy.org/en/latest/topics/autothrottle.html
