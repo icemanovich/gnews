@@ -1,8 +1,8 @@
 # -*- coding: utf-8 -*-
 from __future__ import absolute_import
 import scrapy
-from bs4 import BeautifulSoup
 import time
+from bs4 import BeautifulSoup
 
 #  ----------------
 # HACK !!!! Standart import does not work
@@ -11,6 +11,10 @@ from .. import items
 
 
 class NewsSpider(scrapy.Spider):
+    """
+    Scrap main news.google.ru page
+    """
+
     name = "news"
     allowed_domains = ["news.google.ru"]
     start_urls = (
