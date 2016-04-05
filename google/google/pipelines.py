@@ -6,7 +6,6 @@
 # See: http://doc.scrapy.org/en/latest/topics/item-pipeline.html
 import json
 import pymongo
-from scrapy.conf import settings
 from scrapy.exceptions import DropItem
 
 
@@ -25,45 +24,45 @@ class GoogleJsonPipeLine(object):
 
 
 class MongoPipeLine(object):
+    """
+    Save collected data into MongoDB
+    """
 
-    def __init__(self, mongo_uri, mongo_db):
-        self.mongo_uri = mongo_uri
-        self.mongo_db = mongo_db
-        self.collection_name = settings['MONGO_COLLECTION']
+    def __init__(self, db_host, db_port, db_name, db_collection):
+        self.mongo_host = db_host
+        self.mongo_port = db_port
+        self.mongo_db = db_name
+        self.collection_name = db_collection
+        self.client = None
+        self.db = None
 
     @classmethod
     def from_crawler(cls, crawler):
         return cls(
-            mongo_uri=crawler.settings.get('MONGO_URI'),
-            mongo_db=crawler.settings.get('MONGO_DB', 'items')
+            db_host=crawler.settings.get('MONGO_HOST', 'localhost'),
+            db_port=crawler.settings.get('MONGO_PORT', '27017'),
+            db_name=crawler.settings.get('MONGO_DB', 'google'),
+            db_collection=crawler.settings.get('MONGO_COLLECTION', 'news')
         )
 
     def open_spider(self, spider):
-        self.client = pymongo.MongoClient(self.mongo_uri)
+        if not self.mongo_host:
+            raise Exception
+
+        self.client = pymongo.MongoClient(self.mongo_host)
         self.db = self.client[self.mongo_db]
 
     def close_spider(self, spider):
         self.client.close()
 
     def process_item(self, item, spider):
-        self.db[self.collection_name].insert(dict(item))
+        """
+        Filter duplicated items and save it into DB
+        """
+
+        if self.db[self.collection_name].find({'url': item['url']}).count():
+            raise DropItem("Duplicate item {0}".format(item['url']))
+        else:
+            self.db[self.collection_name].insert(dict(item))
+
         return item
-    # def __init__(self):
-    #     connection = pymongo.MongoClient(
-    #         settings['MONGO_SERVER'],
-    #         settings['MONGO_PORT']
-    #     )
-    #     db = connection[settings['MONGO_DB']]
-    #     self.collection = db[settings['MONGO_COLLECTION']]
-    #
-    # def process_item(self, item, spider):
-    #     valid = True
-    #     for data in item:
-    #         if not data:
-    #             valid = False
-    #             raise DropItem("Missing {0}!".format(data))
-    #     if valid:
-    #         self.collection.insert(dict(item))
-    #         # log.msg("Question added to MongoDB database!",
-    #         #         level=log.DEBUG, spider=spider)
-    #     return item
