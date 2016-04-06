@@ -37,8 +37,6 @@ class KeywordsSpider(scrapy.Spider):
 
     def parse(self, response):
 
-        print(response.url)
-
         soup = BeautifulSoup(response.body, 'html.parser')
         blocks = soup.find("div", attrs={"id": "ires"})
 
