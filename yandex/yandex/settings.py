@@ -16,11 +16,14 @@ NEWSPIDER_MODULE = 'yandex.spiders'
 
 
 LOG_LEVEL = 'INFO'
+DEBUG_CONTENT=False
 
 MONGO_HOST = "localhost"
 MONGO_PORT = 27017
-MONGO_DB = "ynews"
-MONGO_COLLECTION = "news"
+MONGO_DB = "yanews"
+
+YANDEX_SUBJECTS = 'yandex_subjects'
+YANDEX_DONORS = 'yandex_donors'
 
 
 # Crawl responsibly by identifying yourself (and your website) on the user-agent
@@ -72,11 +75,9 @@ MONGO_COLLECTION = "news"
 #ITEM_PIPELINES = {
 #    'yandex.pipelines.SomePipeline': 300,
 #}
-ITEM_PIPELINES = [
-   # 'yandex.pipelines.MongoPipeline',
-#    subject
-#    domor
-]
+# ITEM_PIPELINES = [
+   # 'yandex.pipelines.MongoPipeLine',
+# ]
 
 # Enable and configure the AutoThrottle extension (disabled by default)
 # See http://doc.scrapy.org/en/latest/topics/autothrottle.html

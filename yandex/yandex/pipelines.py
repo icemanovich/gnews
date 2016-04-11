@@ -4,8 +4,53 @@
 #
 # Don't forget to add your pipeline to the ITEM_PIPELINES setting
 # See: http://doc.scrapy.org/en/latest/topics/item-pipeline.html
+from scrapy.exceptions import DropItem
+import pymongo
+import json
 
 
-class YandexPipeline(object):
+class MongoPipeLine(object):
+    def __init__(self, db_host, db_port, db_name, db_subject_name='subjects', db_donor_name='donors'):
+        self.mongo_host = db_host
+        self.mongo_port = db_port
+        self.mongo_db = db_name
+        self.collection_subject = db_subject_name
+        self.collection_donor = db_donor_name
+        self.client = None
+        self.db = None
+
+    @classmethod
+    def from_crawler(cls, crawler):
+        return cls(
+            db_host=crawler.settings.get('MONGO_HOST', 'localhost'),
+            db_port=crawler.settings.get('MONGO_PORT', '27017'),
+            db_name=crawler.settings.get('MONGO_DB', 'yandex'),
+            db_subject_name=crawler.settings.get('YANDEX_SUBJECTS', 'subjects'),
+            db_donor_name=crawler.settings.get('YANDEX_DONORS', 'donors')
+        )
+
+    def open_spider(self, spider):
+        if not self.mongo_host:
+            raise Exception
+
+        self.client = pymongo.MongoClient(self.mongo_host)
+        self.db = self.client[self.mongo_db]
+
+    def close_spider(self, spider):
+        self.client.close()
+
     def process_item(self, item, spider):
-        return item
+        """
+        Filter duplicated items and save it into DB
+        """
+
+        # if self.db[self.collection_name].find({'url': item['url']}).count():
+        #     raise DropItem("Duplicate item {0}".format(item['url']))
+        # else:
+        #     self.db[self.collection_name].insert(dict(item))
+        # return item
+
+
+
+
+

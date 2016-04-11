@@ -19,8 +19,10 @@ class YanewsSpider(scrapy.Spider):
         'http://www.news.yandex.ru/',
     )
 
-    max_pages = 10
+    max_pages = 1
     current_page = 0
+    DEBUG = False
+
 
     def __init__(self, keywords='', **kwargs):
         super(YanewsSpider, self).__init__(**kwargs)
@@ -32,62 +34,66 @@ class YanewsSpider(scrapy.Spider):
         )
 
     def start_requests(self):
-        self.logger.warning('RUN START_REQUESTS')
         yield http.Request(self.start_urls[0], callback=self.parse)
 
     def parse(self, response):
-
+        """
+        :param response: HtmlResponse
+        :rtype:
+        """
         self.logger.warning('Craws url :: {0}'.format(response.url))
-        self.save_to_file(response.body)
 
-        # open_in_browser(response)
-        """ ------------------------------ """
+        if self.DEBUG:
+            self.save_to_file(response.body)
+            open_in_browser(response)
 
-        soup = BeautifulSoup(response.body, 'html.parser')
-        blocks = soup.find("div", attrs={"class": "page-content__left"}).find_all('li', attrs={"class": "search-item"})
+        try:
+            soup = BeautifulSoup(response.body, 'html.parser')
+            blocks = soup.find("div", attrs={"class": "page-content__left"}).find_all('li', attrs={"class": "search-item"})
 
-        for item in blocks:
-            d = ''
-            # div = item.find('div', attrs={"class": "document i-bem"})
-            li = item.next
-            if 'story-item' in li.get('class'):
-                # this is subject
-                # -> request and parse for SUBJECT!!!!
-                try:
+            for item in blocks:
+                li = item.next
+                if 'story-item' in li.get('class'):
+                    '''
+                    Detect Subject and go into it to crawl donors
+                    '''
+                    try:
+                        subject_link = li.find('h2', attrs={'class': 'story-item__title'}).next['href']
+                        yield http.Request(self.format_subject_url(subject_link), callback=self.parse_subjects)
+                    except Exception as e:
+                        self.logger.error(e)
 
-                    subject_link = li.find('h2', attrs={'class': 'story-item__title'}).next['href']
-                    yield http.Request(self.format_subject_url(subject_link), callback=self.parse_subjects)
-                except Exception as e:
-                    self.logger.error(e)
+                        # else:
+                        # this is donor for top level subject
+                        # create Donor object and save it
+                        # donor = items.YandexDonor()
+                        # try:
+                        #     title_tag = item.find('div', attrs={'class': 'document__title'}).next
+                        #     donor['link'] = title_tag['href']
+                        #     donor['title'] = title_tag.get_text()
+                        #     donor['description'] = item.find('div', attrs={'class': 'document__snippet'}).get_text()
+                        #
+                        #     ''' TODO :: Figure out how to parse correct data '''
+                        #     donor['published_at'] = item.find('div', attrs={'class': 'document__time'}).get_text()
+                        #     donor['created_at'] = str(int(time.time()))
+                        #
+                        #     yield donor
+                        # except Exception as e:
+                        #     self.logger.error(e)
 
-            else:
-                # this is donor
-                # create Donor object and save it
-                donor = items.YandexDonor()
-                try:
-                    title_tag = item.find('div', attrs={'class': 'document__title'}).next
-                    donor['link'] = title_tag['href']
-                    donor['title'] = title_tag.get_text()
-                    donor['description'] = item.find('div', attrs={'class': 'document__snippet'}).get_text()
+                        #     check for next page
 
-                    ''' TODO :: Figure out how to parse correct data '''
-                    donor['published_at'] = item.find('div', attrs={'class': 'document__time'}).get_text()
-                    donor['created_at'] = str(int(time.time()))
+                        #   request next page
+            content_block = soup.find('div', attrs={'class': 'page-content__left'})
+            if self.is_next_page_exists(content_block):
+                self.current_page += 1
 
-                    yield donor
-                except Exception as e:
-                    self.logger.error(e)
+                ''' Limit pages scan '''
+                if self.max_pages >= self.current_page:
+                    yield http.Request('', callback=self.parse)  # crawl SUBJECT and DONORS
 
-        g = ''
-
-    #     check for next page
-
-    #   request next page
-    #     if self.is_next_page_exists(content.get_text()):
-    #         self.current_page += 1
-    #         yield http.Request('', callback=self.parse)  # crawl SUBJECT and DONORS
-
-        # yield .....SOMETHING FRONT PAGE DONORS
+        except Exception as e:
+            self.logger.error('Page skip::{0}'.format(e))
 
     def parse_subjects(self, response):
         """
@@ -96,21 +102,19 @@ class YanewsSpider(scrapy.Spider):
         :param response: HtmlResponse
         :return:
         """
-        a = ''
-
-        self.save_to_file(response.body, 'subject')
-        open_in_browser(response)
+        if self.DEBUG:
+            self.save_to_file(response.body, 'subject')
+            open_in_browser(response)
 
         soup = BeautifulSoup(response.body, 'html.parser')
 
         subject = items.YandexSubject()
-        title = soup.find('h1', attrs={'class': 'story__head'})
-        subject['title'] = title.get_text()
+        subject['title'] = soup.find('h1', attrs={'class': 'story__head'}).next.get_text()
 
         #  TODO:: Does not work with cyrillic characters !!
         # subject['title_hash'] = hashlib.md5(subject['title'])
 
-        subject['link'] = response.url
+        subject['link'] = self.extract_external_link(response.url)
         subject['created_at'] = str(int(time.time()))
         subject['donors_count'] = 0
 
@@ -131,15 +135,23 @@ class YanewsSpider(scrapy.Spider):
                 subject['donors_count'] += 1
                 yield donor
 
-                # TODO :: Try to yield both objects !!!
-                # yield donor, subject
-
         except Exception as e:
             self.logger.error('Error in parse_subjects method on getting donor. {0}'.format(e))
 
+        yield subject
+
     @staticmethod
-    def is_next_page_exists(html):
-        if '<span class="button__text">Следующая</span>' in html:
+    def is_next_page_exists(content):
+        """ Check ifHTML contains page counter for further pages
+
+        :param content: Tag
+        :return:
+        """
+        # if '<span class="button__text">Следующая</span>' in html:
+        #     return True
+
+        counter_block = content.find_all('span', attrs={'class': 'pager__group'})
+        if len(counter_block[-1].contents) == 1:
             return True
         return False
 
@@ -163,6 +175,13 @@ class YanewsSpider(scrapy.Spider):
     @staticmethod
     def format_subject_url(donor_link):
         return 'https://news.yandex.ru/{0}&content=alldocs'.format(donor_link.strip('/'))
+
+    @staticmethod
+    def extract_external_link(url):
+        """ Return external donor link from yandex search string """
+
+        url = url.replace('https://news.yandex.ru/yandsearch?cl4url=', '')
+        return url[:url.index('&')]
 
     """ ================================ """
 
