@@ -1,12 +1,12 @@
 # -*- coding: utf-8 -*-
 from __future__ import absolute_import
-import scrapy
-from scrapy import http
-from scrapy.utils.response import open_in_browser
 import time
+import scrapy
 import hashlib
-from bs4 import BeautifulSoup
 from .. import items
+from scrapy import http
+from bs4 import BeautifulSoup
+from scrapy.utils.response import open_in_browser
 
 
 class YanewsSpider(scrapy.Spider):
@@ -22,7 +22,6 @@ class YanewsSpider(scrapy.Spider):
     max_pages = 1
     current_page = 0
     DEBUG = False
-
 
     def __init__(self, keywords='', **kwargs):
         super(YanewsSpider, self).__init__(**kwargs)
@@ -49,7 +48,8 @@ class YanewsSpider(scrapy.Spider):
 
         try:
             soup = BeautifulSoup(response.body, 'html.parser')
-            blocks = soup.find("div", attrs={"class": "page-content__left"}).find_all('li', attrs={"class": "search-item"})
+            blocks = soup.find("div", attrs={"class": "page-content__left"}) \
+                .find_all('li', attrs={"class": "search-item"})
 
             for item in blocks:
                 li = item.next
@@ -170,7 +170,8 @@ class YanewsSpider(scrapy.Spider):
         if only_today:
             period = '&within=7'
 
-        return 'https://news.yandex.ru/yandsearch?rpt=nnews2&grhow=clutop&text={0}&rpt=nnews2&rel=rel&numdoc=30&p={1}&noreask=1{2}'.format(search_string, page, period)
+        return 'https://news.yandex.ru/yandsearch?rpt=nnews2&grhow=clutop&text={0}&rpt=nnews2&rel=rel&numdoc=30&p={1}&noreask=1{2}'.format(
+            search_string, page, period)
 
     @staticmethod
     def format_subject_url(donor_link):

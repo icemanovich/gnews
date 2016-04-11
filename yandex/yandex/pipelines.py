@@ -44,13 +44,12 @@ class MongoPipeLine(object):
         Filter duplicated items and save it into DB
         """
 
-        # if self.db[self.collection_name].find({'url': item['url']}).count():
-        #     raise DropItem("Duplicate item {0}".format(item['url']))
-        # else:
-        #     self.db[self.collection_name].insert(dict(item))
-        # return item
+        collection_name = self.collection_donor \
+            if 'donor' in item.__class__.__name__.lower() \
+            else self.collection_subject
 
-
-
-
-
+        if self.db[collection_name].find({'link': item['link']}).count():
+            raise DropItem("Duplicate item {0}".format(item['link']))
+        else:
+            self.db[collection_name].insert(dict(item))
+        return item

@@ -75,9 +75,9 @@ YANDEX_DONORS = 'yandex_donors'
 #ITEM_PIPELINES = {
 #    'yandex.pipelines.SomePipeline': 300,
 #}
-# ITEM_PIPELINES = [
-   # 'yandex.pipelines.MongoPipeLine',
-# ]
+ITEM_PIPELINES = [
+   'yandex.pipelines.MongoPipeLine',
+]
 
 # Enable and configure the AutoThrottle extension (disabled by default)
 # See http://doc.scrapy.org/en/latest/topics/autothrottle.html
