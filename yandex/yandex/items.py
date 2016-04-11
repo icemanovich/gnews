@@ -12,7 +12,11 @@ class YandexSubject(scrapy.Item):
     title = scrapy.Field()
     title_hash = scrapy.Field()
     link = scrapy.Field()
+    link_target = scrapy.Field()
+    link_hash = scrapy.Field()
+
     description = scrapy.Field()
+    keywords = scrapy.Field()
 
     rating = scrapy.Field(default=0)
     past_rating = scrapy.Field(default=0)
@@ -40,6 +44,8 @@ class YandexDonor(scrapy.Item):
     category_id = scrapy.Field()
     region_id = scrapy.Field()
     description = scrapy.Field()
+    keywords = scrapy.Field()
+
     link = scrapy.Field()
     rating = scrapy.Field()
 

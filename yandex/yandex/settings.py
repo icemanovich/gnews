@@ -16,7 +16,7 @@ NEWSPIDER_MODULE = 'yandex.spiders'
 
 
 LOG_LEVEL = 'INFO'
-DEBUG_CONTENT=False
+DEBUG_CONTENT = False
 
 MONGO_HOST = "localhost"
 MONGO_PORT = 27017
@@ -35,22 +35,22 @@ YANDEX_DONORS = 'yandex_donors'
 # Configure a delay for requests for the same website (default: 0)
 # See http://scrapy.readthedocs.org/en/latest/topics/settings.html#download-delay
 # See also autothrottle settings and docs
-#DOWNLOAD_DELAY=3
+DOWNLOAD_DELAY = 2
 # The download delay setting will honor only one of:
 #CONCURRENT_REQUESTS_PER_DOMAIN=16
 #CONCURRENT_REQUESTS_PER_IP=16
 
 # Disable cookies (enabled by default)
-#COOKIES_ENABLED=False
+COOKIES_ENABLED = False
 
 # Disable Telnet Console (enabled by default)
 #TELNETCONSOLE_ENABLED=False
 
 # Override the default request headers:
-#DEFAULT_REQUEST_HEADERS = {
-#   'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
-#   'Accept-Language': 'en',
-#}
+DEFAULT_REQUEST_HEADERS = {
+  'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8;text/css,*/*;q=0.1',
+  'Accept-Language': 'ru-RU,ru;q=0.8,en-US;q=0.5,en;q=0.3',
+}
 
 # Enable or disable spider middlewares
 # See http://scrapy.readthedocs.org/en/latest/topics/spider-middleware.html
@@ -72,12 +72,12 @@ YANDEX_DONORS = 'yandex_donors'
 
 # Configure item pipelines
 # See http://scrapy.readthedocs.org/en/latest/topics/item-pipeline.html
-#ITEM_PIPELINES = {
-#    'yandex.pipelines.SomePipeline': 300,
-#}
-ITEM_PIPELINES = [
-   'yandex.pipelines.MongoPipeLine',
-]
+ITEM_PIPELINES = {
+   'yandex.pipelines.MongoPipeLine': 300,
+}
+# ITEM_PIPELINES = [
+#    'yandex.pipelines.MongoPipeLine',
+# ]
 
 # Enable and configure the AutoThrottle extension (disabled by default)
 # See http://doc.scrapy.org/en/latest/topics/autothrottle.html

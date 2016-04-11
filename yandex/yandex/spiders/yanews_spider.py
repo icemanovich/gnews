@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 from __future__ import absolute_import
 import time
+import urllib
 import scrapy
 import hashlib
 from .. import items
@@ -19,18 +20,19 @@ class YanewsSpider(scrapy.Spider):
         'http://www.news.yandex.ru/',
     )
 
-    max_pages = 1
-    current_page = 0
     DEBUG = False
+    keywords = ''
+    max_pages = 10
+    current_page = 0
 
     def __init__(self, keywords='', **kwargs):
         super(YanewsSpider, self).__init__(**kwargs)
 
         self.keywords = keywords
-
         self.start_urls = (
             self.format_url(self.keywords, self.current_page),
         )
+        self.logger.info('Scrap by keywords: |{0}|'.format(self.keywords))
 
     def start_requests(self):
         yield http.Request(self.start_urls[0], callback=self.parse)
@@ -40,7 +42,7 @@ class YanewsSpider(scrapy.Spider):
         :param response: HtmlResponse
         :rtype:
         """
-        self.logger.warning('Craws url :: {0}'.format(response.url))
+        self.logger.info('Crawl url :: {0}'.format(response.url))
 
         if self.DEBUG:
             self.save_to_file(response.body)
@@ -60,8 +62,8 @@ class YanewsSpider(scrapy.Spider):
                     try:
                         subject_link = li.find('h2', attrs={'class': 'story-item__title'}).next['href']
                         yield http.Request(self.format_subject_url(subject_link), callback=self.parse_subjects)
-                    except Exception as e:
-                        self.logger.error(e)
+                    except AttributeError as e_attr:
+                        self.logger.error('Error to get HTML content in outer Subject page :: {0}'.format(e_attr))
 
                         # else:
                         # this is donor for top level subject
@@ -81,8 +83,6 @@ class YanewsSpider(scrapy.Spider):
                         # except Exception as e:
                         #     self.logger.error(e)
 
-                        #     check for next page
-
                         #   request next page
             content_block = soup.find('div', attrs={'class': 'page-content__left'})
             if self.is_next_page_exists(content_block):
@@ -90,10 +90,13 @@ class YanewsSpider(scrapy.Spider):
 
                 ''' Limit pages scan '''
                 if self.max_pages >= self.current_page:
-                    yield http.Request('', callback=self.parse)  # crawl SUBJECT and DONORS
+                    '''crawl SUBJECT and DONORS '''
+                    yield http.Request(self.format_url(self.keywords, self.current_page), callback=self.parse)
 
+        except ValueError as e_value:
+            self.logger.info('Page skip :: {0}'.format(e_value))
         except Exception as e:
-            self.logger.error('Page skip::{0}'.format(e))
+            self.logger.info('Global exception - [type{0}] :: {0}'.format(type(e).__name__, e))
 
     def parse_subjects(self, response):
         """
@@ -114,9 +117,14 @@ class YanewsSpider(scrapy.Spider):
         #  TODO:: Does not work with cyrillic characters !!
         # subject['title_hash'] = hashlib.md5(subject['title'])
 
-        subject['link'] = self.extract_external_link(response.url)
+        subject['link'] = urllib.unquote(response.url).decode('utf8')
+        ''' Link to Yandex referrer to '''
+        subject['link_target'] = urllib.unquote(self.extract_external_link(response.url)).decode('utf8')
+        subject['link_hash'] = self.hash_link(subject['link'])
+
         subject['created_at'] = str(int(time.time()))
         subject['donors_count'] = 0
+        subject['keywords'] = self.keywords
 
         try:
             content = soup.find('div', attrs={'class': 'story__main'})
@@ -126,11 +134,13 @@ class YanewsSpider(scrapy.Spider):
                 d_title = item.find('h2', attrs={'class': 'doc__title'})
 
                 donor['title'] = d_title.next.get_text()
-                donor['link'] = d_title.next['href']
+                donor['link'] = urllib.unquote(d_title.next['href']).decode('utf8')
+                donor['link_hash'] = self.hash_link(donor['link'])
                 donor['description'] = item.find('div', attrs={'class': 'doc__content'}).next.get_text()
                 donor['published_at'] = item.find('div', attrs={'class': 'doc__time'}).get_text()
 
-                donor['subject_id'] = hashlib.md5(subject['link']).hexdigest()
+                donor['subject_id'] = subject['link_hash']
+                donor['keywords'] = self.keywords
 
                 subject['donors_count'] += 1
                 yield donor
@@ -142,7 +152,7 @@ class YanewsSpider(scrapy.Spider):
 
     @staticmethod
     def is_next_page_exists(content):
-        """ Check ifHTML contains page counter for further pages
+        """ Check if HTML contains page counter for further pages
 
         :param content: Tag
         :return:
@@ -163,9 +173,6 @@ class YanewsSpider(scrapy.Spider):
         :param page: str
         :return: str
         """
-        # if ' ' in search_string:
-        #     search_string = '+'.join(search_string.split(' '))
-
         period = ''
         if only_today:
             period = '&within=7'
@@ -183,6 +190,10 @@ class YanewsSpider(scrapy.Spider):
 
         url = url.replace('https://news.yandex.ru/yandsearch?cl4url=', '')
         return url[:url.index('&')]
+
+    @staticmethod
+    def hash_link(link):
+        return hashlib.md5(link).hexdigest()
 
     """ ================================ """
 
