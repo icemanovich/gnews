@@ -188,6 +188,6 @@ class YanewsSpider(scrapy.Spider):
     # DEBUG ONLY
     @staticmethod
     def save_to_file(string, filename='Output'):
-        text_file = open("{0}.html".format(filename), "w")
+        text_file = open("tmp/{0}.html".format(filename), "w")
         text_file.write(string)
         text_file.close()
