@@ -50,6 +50,14 @@ class YanewsSpider(scrapy.Spider):
 
         try:
             soup = BeautifulSoup(response.body, 'html.parser')
+
+            '''
+            Check if this page is not blocked (captcha)
+            '''
+            if self.is_page_with_captcha(soup):
+                # TODO: auth and request again
+                raise Exception('Yandex BAN page with captcha')
+
             blocks = soup.find("div", attrs={"class": "page-content__left"}) \
                 .find_all('li', attrs={"class": "search-item"})
 
@@ -65,25 +73,7 @@ class YanewsSpider(scrapy.Spider):
                     except AttributeError as e_attr:
                         self.logger.error('Error to get HTML content in outer Subject page :: {0}'.format(e_attr))
 
-                        # else:
-                        # this is donor for top level subject
-                        # create Donor object and save it
-                        # donor = items.YandexDonor()
-                        # try:
-                        #     title_tag = item.find('div', attrs={'class': 'document__title'}).next
-                        #     donor['link'] = title_tag['href']
-                        #     donor['title'] = title_tag.get_text()
-                        #     donor['description'] = item.find('div', attrs={'class': 'document__snippet'}).get_text()
-                        #
-                        #     ''' TODO :: Figure out how to parse correct data '''
-                        #     donor['published_at'] = item.find('div', attrs={'class': 'document__time'}).get_text()
-                        #     donor['created_at'] = str(int(time.time()))
-                        #
-                        #     yield donor
-                        # except Exception as e:
-                        #     self.logger.error(e)
-
-                        #   request next page
+            ''' request next page '''
             content_block = soup.find('div', attrs={'class': 'page-content__left'})
             if self.is_next_page_exists(content_block):
                 self.current_page += 1
@@ -97,6 +87,9 @@ class YanewsSpider(scrapy.Spider):
             self.logger.info('Page skip :: {0}'.format(e_value))
         except Exception as e:
             self.logger.info('Global exception - [type{0}] :: {0}'.format(type(e).__name__, e))
+            import traceback
+            traceback.print_exc()
+            open_in_browser(response)
 
     def parse_subjects(self, response):
         """
@@ -164,6 +157,18 @@ class YanewsSpider(scrapy.Spider):
         if len(counter_block[-1].contents) == 1:
             return True
         return False
+
+    @staticmethod
+    def is_page_with_captcha(soup):
+        """
+        Check if captcha form contains on page
+        :param soup: BeautifulSoup
+        :rtype: bool
+        """
+        captcha = soup.find('form', attrs={'action': '/checkcaptcha'})
+        if captcha is None:
+            return False
+        return True
 
     @staticmethod
     def format_url(search_string='', page=0, only_today=False):
