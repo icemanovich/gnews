@@ -1,4 +1,0 @@
-
-
-class YandexBanException(Exception):
-    pass

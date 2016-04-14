@@ -19,7 +19,8 @@ DEBUG_CONTENT = False
 
 MONGO_HOST = "localhost"
 MONGO_PORT = 27017
-MONGO_DB = "yanews"
+# MONGO_DB = "yanews"
+MONGO_DB = "yandex_iri"
 
 YANDEX_SUBJECTS = 'yandex_subjects'
 YANDEX_DONORS = 'yandex_donors'

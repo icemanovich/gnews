@@ -6,7 +6,6 @@
 # See: http://doc.scrapy.org/en/latest/topics/item-pipeline.html
 from scrapy.exceptions import DropItem
 import pymongo
-import json
 
 
 class MongoPipeLine(object):

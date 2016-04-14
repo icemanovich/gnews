@@ -9,6 +9,9 @@ from scrapy import http
 from bs4 import BeautifulSoup
 from scrapy.utils.response import open_in_browser
 
+from yandex.exceptions import YandexBan
+# from yandex.yandex.exceptions import YandexMockupError
+
 
 class YanewsSpider(scrapy.Spider):
     """
@@ -28,7 +31,8 @@ class YanewsSpider(scrapy.Spider):
     def __init__(self, keywords='', **kwargs):
         super(YanewsSpider, self).__init__(**kwargs)
 
-        self.keywords = keywords
+        self.keywords = 'клименко и ири'
+        # self.keywords = keywords
         self.start_urls = (
             self.format_url(self.keywords, self.current_page),
         )
@@ -56,7 +60,7 @@ class YanewsSpider(scrapy.Spider):
             '''
             if self.is_page_with_captcha(soup):
                 # TODO: auth and request again
-                raise Exception('Yandex BAN page with captcha')
+                raise YandexBan('Yandex BAN page with captcha')
 
             blocks = soup.find("div", attrs={"class": "page-content__left"}) \
                 .find_all('li', attrs={"class": "search-item"})
@@ -85,11 +89,13 @@ class YanewsSpider(scrapy.Spider):
 
         except ValueError as e_value:
             self.logger.info('Page skip :: {0}'.format(e_value))
+        except YandexBan as e_ya:
+            self.logger.warning('Yandex Ban your request :: {0}'.format(e_ya))
         except Exception as e:
             self.logger.info('Global exception - [type{0}] :: {0}'.format(type(e).__name__, e))
             import traceback
             traceback.print_exc()
-            open_in_browser(response)
+            # open_in_browser(response)
 
     def parse_subjects(self, response):
         """
@@ -102,24 +108,24 @@ class YanewsSpider(scrapy.Spider):
             self.save_to_file(response.body, 'subject')
             open_in_browser(response)
 
-        soup = BeautifulSoup(response.body, 'html.parser')
-
-        subject = items.YandexSubject()
-        subject['title'] = soup.find('h1', attrs={'class': 'story__head'}).next.get_text()
-
-        #  TODO:: Does not work with cyrillic characters !!
-        # subject['title_hash'] = hashlib.md5(subject['title'])
-
-        subject['link'] = urllib.unquote(response.url).decode('utf8')
-        ''' Link to Yandex referrer to '''
-        subject['link_target'] = urllib.unquote(self.extract_external_link(response.url)).decode('utf8')
-        subject['link_hash'] = self.hash_link(subject['link'])
-
-        subject['created_at'] = str(int(time.time()))
-        subject['donors_count'] = 0
-        subject['keywords'] = self.keywords
-
         try:
+            soup = BeautifulSoup(response.body, 'html.parser')
+
+            subject = items.YandexSubject()
+            subject['title'] = soup.find('h1', attrs={'class': 'story__head'}).next.get_text()
+
+            #  TODO:: Does not work with cyrillic characters !!
+            # subject['title_hash'] = hashlib.md5(subject['title'])
+
+            subject['link'] = urllib.unquote(response.url).decode('utf8')
+            ''' Link to Yandex referrer to '''
+            subject['link_target'] = urllib.unquote(self.extract_external_link(response.url)).decode('utf8')
+            subject['link_hash'] = self.hash_link(subject['link'])
+
+            subject['created_at'] = str(int(time.time()))
+            subject['donors_count'] = 0
+            subject['keywords'] = self.keywords
+
             content = soup.find('div', attrs={'class': 'story__main'})
             for item in content.find_all('div', attrs={'class': 'story__group'}):
                 donor = items.YandexDonor()
@@ -138,10 +144,10 @@ class YanewsSpider(scrapy.Spider):
                 subject['donors_count'] += 1
                 yield donor
 
+            yield subject
+
         except Exception as e:
             self.logger.error('Error in parse_subjects method on getting donor. {0}'.format(e))
-
-        yield subject
 
     @staticmethod
     def is_next_page_exists(content):
