@@ -11,6 +11,9 @@ from scrapy.utils.response import open_in_browser
 
 from yandex.exceptions import YandexBan
 # from yandex.yandex.exceptions import YandexMockupError
+import graphitesend
+from yandex import settings
+
 
 
 class YanewsSpider(scrapy.Spider):
@@ -27,16 +30,26 @@ class YanewsSpider(scrapy.Spider):
     keywords = ''
     max_pages = 10
     current_page = 0
+    g = None
 
     def __init__(self, keywords='', **kwargs):
         super(YanewsSpider, self).__init__(**kwargs)
 
+        ''' TODO :: Remove static keywords '''
         self.keywords = 'клименко и ири'
         # self.keywords = keywords
         self.start_urls = (
             self.format_url(self.keywords, self.current_page),
         )
         self.logger.info('Scrap by keywords: |{0}|'.format(self.keywords))
+
+        self.g = graphitesend.init(
+            graphite_server=settings.GRAPHITE_HOST,
+            graphite_port=settings.GRAPHITE_PORT,
+            system_name='',
+            prefix='yanews',
+            suffix='.sum'
+        )
 
     def start_requests(self):
         yield http.Request(self.start_urls[0], callback=self.parse)
@@ -47,7 +60,6 @@ class YanewsSpider(scrapy.Spider):
         :rtype:
         """
         self.logger.info('Crawl url :: {0}'.format(response.url))
-
         if self.DEBUG:
             self.save_to_file(response.body)
             open_in_browser(response)
@@ -59,6 +71,8 @@ class YanewsSpider(scrapy.Spider):
             Check if this page is not blocked (captcha)
             '''
             if self.is_page_with_captcha(soup):
+                self.g.send('error.ban', 1)
+
                 # TODO: auth and request again
                 raise YandexBan('Yandex BAN page with captcha')
 
@@ -76,6 +90,7 @@ class YanewsSpider(scrapy.Spider):
                         yield http.Request(self.format_subject_url(subject_link), callback=self.parse_subjects)
                     except AttributeError as e_attr:
                         self.logger.error('Error to get HTML content in outer Subject page :: {0}'.format(e_attr))
+                        self.g.send('error.page_parse_error', 1)
 
             ''' request next page '''
             content_block = soup.find('div', attrs={'class': 'page-content__left'})
@@ -96,6 +111,10 @@ class YanewsSpider(scrapy.Spider):
             import traceback
             traceback.print_exc()
             # open_in_browser(response)
+            ''' TODO catch exception
+            ERROR: Error in parse_subjects method on getting donor. 'ascii' codec can't encode characters in position 33-35: ordinal not in range(128)
+            '''
+            self.g.send('error.global', 1)
 
     def parse_subjects(self, response):
         """
@@ -131,9 +150,16 @@ class YanewsSpider(scrapy.Spider):
                 donor = items.YandexDonor()
 
                 d_title = item.find('h2', attrs={'class': 'doc__title'})
-
                 donor['title'] = d_title.next.get_text()
-                donor['link'] = urllib.unquote(d_title.next['href']).decode('utf8')
+                donor_link = d_title.next['href']
+
+                try:
+                    donor_link = urllib.unquote(d_title.next['href']).decode('utf8')
+                except UnicodeEncodeError as e_uni:
+                    self.logger.error('Error to Unquote donor link. Keep raw url :: {0}'.format(e_uni))
+                finally:
+                    donor['link'] = donor_link
+
                 donor['link_hash'] = self.hash_link(donor['link'])
                 donor['description'] = item.find('div', attrs={'class': 'doc__content'}).next.get_text()
                 donor['published_at'] = item.find('div', attrs={'class': 'doc__time'}).get_text()
@@ -143,11 +169,14 @@ class YanewsSpider(scrapy.Spider):
 
                 subject['donors_count'] += 1
                 yield donor
+                # self.g.send('donors', 1)
 
             yield subject
+            # self.g.send('subjects', 1)
 
         except Exception as e:
             self.logger.error('Error in parse_subjects method on getting donor. {0}'.format(e))
+            # self.g.send('error.donor_parse', 1)
 
     @staticmethod
     def is_next_page_exists(content):

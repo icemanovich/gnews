@@ -25,6 +25,13 @@ MONGO_DB = "yandex_iri"
 YANDEX_SUBJECTS = 'yandex_subjects'
 YANDEX_DONORS = 'yandex_donors'
 
+# Graphite statistics
+GRAPHITE_HOST = 'graphite.prod'
+GRAPHITE_PORT = 2023
+
+
+# LOG_FORMATTER = 'yandex.exceptions.PoliteLogFormatter'
+
 # Crawl responsibly by identifying yourself (and your website) on the user-agent
 # USER_AGENT = 'yandex (+http://www.yourdomain.com)'
 
