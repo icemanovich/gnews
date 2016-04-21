@@ -70,10 +70,9 @@ class MongoPipeLine(object):
             Output all object - too much
             raise DropItem("Duplicate item {0}".format(item['link']))
             '''
-            raise DropItem("Duplicate item {0}".format(item['link']))
-            # logging.warning("Duplicate item {0}".format(item['link']))
-            # return None
-
+            # raise DropItem("Duplicate item {0}".format(item['link']))
+            logging.warning("Duplicate item {0}".format(item['link']))
+            return None
         else:
             self.db[collection_name].insert(dict(item))
 

@@ -1,5 +1,7 @@
 # -*- coding: utf-8 -*-
 from __future__ import absolute_import
+
+import os
 import time
 import urllib
 import scrapy
@@ -26,23 +28,19 @@ class YanewsSpider(scrapy.Spider):
 
     DEBUG = False
     keywords = ''
-    max_pages = 10
+    max_pages = 100
     current_page = 0
-    g = None
 
     def __init__(self, keywords='', **kwargs):
         super(YanewsSpider, self).__init__(**kwargs)
 
-        ''' TODO :: Remove static keywords '''
-        self.keywords = 'клименко и ири'
-
-        # self.keywords = keywords
+        self.keywords = keywords
         self.start_urls = (
             self.format_url(self.keywords, self.current_page),
         )
-        self.logger.info('Scrap by keywords: |{0}|'.format(self.keywords))
-
         self.DEBUG = settings.DEBUG_CONTENT
+        self.max_pages = settings.MAX_PAGES
+        self.logger.info('Scrap by keywords: |{0}|'.format(self.keywords))
 
     def start_requests(self):
         yield http.Request(self.start_urls[0], callback=self.parse)
@@ -59,6 +57,7 @@ class YanewsSpider(scrapy.Spider):
 
         try:
             soup = BeautifulSoup(response.body, 'html.parser')
+            self.graphite().send('scrapped.pages', 1)
 
             '''
             Check if this page is not blocked (captcha)
@@ -146,7 +145,8 @@ class YanewsSpider(scrapy.Spider):
                 try:
                     donor_link = urllib.unquote(d_title.next['href']).decode('utf8')
                 except UnicodeEncodeError as e_uni:
-                    self.logger.error('Unable to Unquote donor link. Keep raw url :: {0}'.format(e_uni))
+                    self.logger.error('Unable to convert donor link. Keep raw url :: {0} {1} {2} '.format(
+                        donor_link, os.linesep, e_uni))
                 finally:
                     donor['link'] = donor_link
 

@@ -26,13 +26,10 @@ class CustomUserAgentMiddleware(object):
     def process_request(self, request, spider):
         agent = random.choice(AGENTS)
 
-        # real agent
-        # Mozilla/5.0 (Macintosh; Intel Mac OS X 10.11; rv:45.0) Gecko/20100101 Firefox/45.0
-
         request.headers['User-Agent'] = agent
         request.headers['Accept-Language'] = 'ru-RU,ru;q=0.8,en-US;q=0.5,en;q=0.3'
         request.headers['Accept'] = 'application/json, text/javascript, */*; q=0.01'
-        print('HEADERS:: |{0}|'.format(request.headers))
+        # print('HEADERS:: |{0}|'.format(request.headers))
 
 
 

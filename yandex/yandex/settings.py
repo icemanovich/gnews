@@ -24,6 +24,8 @@ MONGO_DB = "yandex_news"
 
 YANDEX_SUBJECTS = 'yandex_subjects'
 YANDEX_DONORS = 'yandex_donors'
+MAX_PAGES = 100
+
 
 # Graphite statistics
 GRAPHITE_HOST = 'graphite.prod'
