@@ -4,25 +4,23 @@
 #
 # Don't forget to add your pipeline to the ITEM_PIPELINES setting
 # See: http://doc.scrapy.org/en/latest/topics/item-pipeline.html
-import graphitesend
-from scrapy.exceptions import DropItem
 import pymongo
 import logging
+from statistics import Statistics
+# from scrapy.exceptions import DropItem
 
 
 class MongoPipeLine(object):
+    """
+    Save collected items into MongoDb
+    """
 
-    """ Graphite """
-    g = None
-
-    def __init__(self, db_host, db_port, db_name, yandex_item, graphite):
+    def __init__(self, db_host, db_port, db_name, yandex_item):
         """
-
         :param db_host: str
         :param db_port: str|int
         :param db_name: str
         :param yandex_item: dict
-        :param graphite: dict
         """
         self.mongo_host = db_host
         self.mongo_port = db_port
@@ -30,14 +28,6 @@ class MongoPipeLine(object):
 
         self.collection_subject = yandex_item['YANDEX_SUBJECTS']
         self.collection_donor = yandex_item['YANDEX_DONORS']
-
-        self.g = graphitesend.init(
-            graphite_server=graphite['GRAPHITE_HOST'],
-            graphite_port=graphite['GRAPHITE_PORT'],
-            system_name='',
-            prefix='yanews',
-            suffix='.sum'
-        )
 
         self.client = None
         self.db = None
@@ -51,10 +41,6 @@ class MongoPipeLine(object):
             yandex_item={
                 'YANDEX_SUBJECTS': crawler.settings.get('YANDEX_SUBJECTS', 'subjects'),
                 'YANDEX_DONORS': crawler.settings.get('YANDEX_DONORS', 'donors')
-            },
-            graphite={
-                'GRAPHITE_HOST': crawler.settings.get('GRAPHITE_HOST', 'graphite.prod'),
-                'GRAPHITE_PORT': crawler.settings.get('GRAPHITE_PORT', 2003)
             }
         )
 
@@ -84,11 +70,13 @@ class MongoPipeLine(object):
             Output all object - too much
             raise DropItem("Duplicate item {0}".format(item['link']))
             '''
-            logging.warning("Duplicate item {0}".format(item['link']))
-            return None
+            raise DropItem("Duplicate item {0}".format(item['link']))
+            # logging.warning("Duplicate item {0}".format(item['link']))
+            # return None
+
         else:
             self.db[collection_name].insert(dict(item))
 
-        self.g.send('item.{0}'.format(item_type), 1)
+        Statistics.init().send('saved.{0}'.format(item_type), 1)
 
         return item

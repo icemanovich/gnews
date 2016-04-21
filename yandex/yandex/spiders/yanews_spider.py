@@ -10,10 +10,8 @@ from bs4 import BeautifulSoup
 from scrapy.utils.response import open_in_browser
 
 from yandex.exceptions import YandexBan
-# from yandex.yandex.exceptions import YandexMockupError
-import graphitesend
 from yandex import settings
-
+from yandex.statistics import Statistics
 
 
 class YanewsSpider(scrapy.Spider):
@@ -37,19 +35,14 @@ class YanewsSpider(scrapy.Spider):
 
         ''' TODO :: Remove static keywords '''
         self.keywords = 'клименко и ири'
+
         # self.keywords = keywords
         self.start_urls = (
             self.format_url(self.keywords, self.current_page),
         )
         self.logger.info('Scrap by keywords: |{0}|'.format(self.keywords))
 
-        self.g = graphitesend.init(
-            graphite_server=settings.GRAPHITE_HOST,
-            graphite_port=settings.GRAPHITE_PORT,
-            system_name='',
-            prefix='yanews',
-            suffix='.sum'
-        )
+        self.DEBUG = settings.DEBUG_CONTENT
 
     def start_requests(self):
         yield http.Request(self.start_urls[0], callback=self.parse)
@@ -71,7 +64,7 @@ class YanewsSpider(scrapy.Spider):
             Check if this page is not blocked (captcha)
             '''
             if self.is_page_with_captcha(soup):
-                self.g.send('error.ban', 1)
+                self.graphite().send('error.ban', 1)
 
                 # TODO: auth and request again
                 raise YandexBan('Yandex BAN page with captcha')
@@ -90,7 +83,7 @@ class YanewsSpider(scrapy.Spider):
                         yield http.Request(self.format_subject_url(subject_link), callback=self.parse_subjects)
                     except AttributeError as e_attr:
                         self.logger.error('Error to get HTML content in outer Subject page :: {0}'.format(e_attr))
-                        self.g.send('error.page_parse_error', 1)
+                        self.graphite().send('error.page_parse_error', 1)
 
             ''' request next page '''
             content_block = soup.find('div', attrs={'class': 'page-content__left'})
@@ -110,11 +103,8 @@ class YanewsSpider(scrapy.Spider):
             self.logger.info('Global exception - [type{0}] :: {0}'.format(type(e).__name__, e))
             import traceback
             traceback.print_exc()
+            self.graphite().send('error.global', 1)
             # open_in_browser(response)
-            ''' TODO catch exception
-            ERROR: Error in parse_subjects method on getting donor. 'ascii' codec can't encode characters in position 33-35: ordinal not in range(128)
-            '''
-            self.g.send('error.global', 1)
 
     def parse_subjects(self, response):
         """
@@ -156,7 +146,7 @@ class YanewsSpider(scrapy.Spider):
                 try:
                     donor_link = urllib.unquote(d_title.next['href']).decode('utf8')
                 except UnicodeEncodeError as e_uni:
-                    self.logger.error('Error to Unquote donor link. Keep raw url :: {0}'.format(e_uni))
+                    self.logger.error('Unable to Unquote donor link. Keep raw url :: {0}'.format(e_uni))
                 finally:
                     donor['link'] = donor_link
 
@@ -169,14 +159,14 @@ class YanewsSpider(scrapy.Spider):
 
                 subject['donors_count'] += 1
                 yield donor
-                # self.g.send('donors', 1)
+                self.graphite().send('scrapped.donors', 1)
 
             yield subject
-            # self.g.send('subjects', 1)
+            self.graphite().send('scrapped.subjects', 1)
 
         except Exception as e:
             self.logger.error('Error in parse_subjects method on getting donor. {0}'.format(e))
-            # self.g.send('error.donor_parse', 1)
+            self.graphite().send('error.donor_parse', 1)
 
     @staticmethod
     def is_next_page_exists(content):
@@ -234,6 +224,10 @@ class YanewsSpider(scrapy.Spider):
     @staticmethod
     def hash_link(link):
         return hashlib.md5(link).hexdigest()
+
+    @staticmethod
+    def graphite():
+        return Statistics.init()
 
     """ ================================ """
 
