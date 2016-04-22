@@ -15,6 +15,7 @@ SPIDER_MODULES = ['yandex.spiders']
 NEWSPIDER_MODULE = 'yandex.spiders'
 
 LOG_LEVEL = 'INFO'
+# Used to open response page in browser to debug. Also write to file this response
 DEBUG_CONTENT = False
 
 MONGO_HOST = "localhost"
@@ -25,17 +26,23 @@ MONGO_DB = "yandex_news"
 YANDEX_SUBJECTS = 'yandex_subjects'
 YANDEX_DONORS = 'yandex_donors'
 MAX_PAGES = 100
+# MAX_RETRIES = 3
 
 
 # Graphite statistics
 GRAPHITE_HOST = 'graphite.prod'
 GRAPHITE_PORT = 2023
 
+# Middleware settings (default: True)
+RETRY_ENABLED = False
+RETRY_TIMES = 2
+# RETRY_HTTP_CODES
 
 # LOG_FORMATTER = 'yandex.exceptions.PoliteLogFormatter'
 
 # Crawl responsibly by identifying yourself (and your website) on the user-agent
 # USER_AGENT = 'yandex (+http://www.yourdomain.com)'
+USER_AGENT = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10.11; rv:45.0) Gecko/20100101 Firefox/45.0'
 
 # Configure maximum concurrent requests performed by Scrapy (default: 16)
 CONCURRENT_REQUESTS = 2
@@ -50,6 +57,7 @@ DOWNLOAD_DELAY = 2
 
 # Disable cookies (enabled by default)
 COOKIES_ENABLED = True
+COOKIES_DEBUG = True
 
 # Disable Telnet Console (enabled by default)
 # TELNETCONSOLE_ENABLED=False

@@ -2,6 +2,7 @@
 from __future__ import absolute_import
 
 import os
+import random
 import time
 import urllib
 import scrapy
@@ -92,7 +93,20 @@ class YanewsSpider(scrapy.Spider):
                 ''' Limit pages scan '''
                 if self.max_pages >= self.current_page:
                     '''crawl SUBJECT and DONORS '''
-                    yield http.Request(self.format_url(self.keywords, self.current_page), callback=self.parse)
+
+                    ''' TODO :: Test multiple cookies '''
+                    if 'cookiejar' in response.meta:
+                        cookiejar = response.meta['cookiejar']
+                    else:
+                        cookiejar = random.randint(1, 100)
+                    ''' ============================= '''
+
+                    yield http.Request(
+                        self.format_url(self.keywords, self.current_page),
+                        callback=self.parse,
+                        errback=self.request_error,
+                        meta={'cookiejar': cookiejar}
+                    )
 
         except ValueError as e_value:
             self.logger.info('Page skip :: {0}'.format(e_value))
@@ -151,8 +165,11 @@ class YanewsSpider(scrapy.Spider):
                     donor['link'] = donor_link
 
                 donor['link_hash'] = self.hash_link(donor['link'])
-                donor['description'] = item.find('div', attrs={'class': 'doc__content'}).next.get_text()
                 donor['published_at'] = item.find('div', attrs={'class': 'doc__time'}).get_text()
+
+                short_info = item.find('div', attrs={'class': 'doc__content'})
+                if short_info:
+                    donor['description'] = short_info.next.get_text()
 
                 donor['subject_id'] = subject['link_hash']
                 donor['keywords'] = self.keywords
@@ -164,6 +181,8 @@ class YanewsSpider(scrapy.Spider):
             yield subject
             self.graphite().send('scrapped.subjects', 1)
 
+        except AttributeError as e_attr:
+            raise Exception(e_attr)
         except Exception as e:
             self.logger.error('Error in parse_subjects method on getting donor. {0}'.format(e))
             self.graphite().send('error.donor_parse', 1)
@@ -237,3 +256,9 @@ class YanewsSpider(scrapy.Spider):
         text_file = open("tmp/{0}.html".format(filename), "w")
         text_file.write(string)
         text_file.close()
+
+
+    def request_error(self, **args):
+        self.logger.warning('REQUEST ERROR RAISED ... ')
+
+
